@@ -48,12 +48,13 @@ function Shell() {
     <div style={{ fontFamily: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" }} className="min-h-screen app-root text-slate-900 flex">
       <Sidebar />
 
-      <main className="flex-1 min-w-0">
+      {/* pb-20 on mobile keeps content clear of the fixed bottom tab bar */}
+      <main className="flex-1 min-w-0 pb-20 sm:pb-0">
         <TopBar />
-        <div className="px-8 py-7 max-w-[1500px] mx-auto w-full">
+        <div className="px-4 sm:px-8 py-5 sm:py-7 max-w-[1500px] mx-auto w-full">
           <View />
         </div>
-        <div className="px-8 pb-8 max-w-[1500px] mx-auto w-full">
+        <div className="px-4 sm:px-8 pb-8 max-w-[1500px] mx-auto w-full">
           <button onClick={resetBoard} className="text-[11px] text-slate-400 hover:text-rose-600">Reset board to original plan</button>
         </div>
       </main>

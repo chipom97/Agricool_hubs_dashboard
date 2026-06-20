@@ -29,16 +29,14 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL = "https://gymqularirlbnbmhnwey.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_5YHwYaejtAY5bawdkZI5IA_S4gKoC4K";
+const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR-ANON-PUBLIC-KEY";
 
 const isConfigured =
   !SUPABASE_URL.includes("YOUR-PROJECT") &&
   !SUPABASE_ANON_KEY.includes("YOUR-ANON");
 
-const supabase = isConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+const supabase = isConfigured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 const impl = {
   configured: isConfigured,
@@ -62,9 +60,7 @@ const impl = {
     if (!supabase) return null;
     try {
       const parsed = JSON.parse(value);
-      const { error } = await supabase
-        .from("board")
-        .upsert({ id: key, data: parsed });
+      const { error } = await supabase.from("board").upsert({ id: key, data: parsed });
       if (error) return null;
       return { key, value, shared: true };
     } catch (e) {
@@ -91,16 +87,10 @@ const impl = {
         .channel("board_" + key)
         .on(
           "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "board",
-            filter: `id=eq.${key}`,
-          },
+          { event: "*", schema: "public", table: "board", filter: `id=eq.${key}` },
           (payload) => {
-            if (payload.new && payload.new.data)
-              cb(JSON.stringify(payload.new.data));
-          },
+            if (payload.new && payload.new.data) cb(JSON.stringify(payload.new.data));
+          }
         )
         .subscribe();
       return () => supabase.removeChannel(channel);
