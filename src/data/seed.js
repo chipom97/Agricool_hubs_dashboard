@@ -199,3 +199,28 @@ export const SEED_SCRATCHPAD = [
   { id: "s10", text: "Farmer lead: Malotwane — willing to validate post-harvest loss + possibly host the first pilot." },
   { id: "s11", text: "SECURITY: passwords were shared in the WhatsApp group (AYCH portal + project email). Do NOT store them here — rotate them and use a password manager." },
 ];
+
+// Single shared notepad — the Scratchpad is now one big page, not blocks.
+// (If a board already has the old block-style scratchpad, BoardContext
+//  migrates those blocks into this string automatically on load.)
+export const SEED_NOTES = `Demo Day = 11 July. Pitch deck must hit: problem, traction, MVP demo, financials, the ask. Tumisang leads delivery.
+
+Concept (current): Climate-smart modular hybrid agricultural storage system. Dual-zone: cold 2-8C + cool/ventilated 8-15C.
+
+Keep precise in external docs: 30-50% post-harvest loss applies to FRUITS & VEGETABLES, not grains.
+
+Pricing benchmark to validate: ~$0.20-0.50 per crate/day (from Sprint 2 notes).
+
+Project assets — email: team@agricoolhubs.com (Hostinger) · WhatsApp Business: +267 73 085 011 · LinkedIn: linkedin.com/company/agricool-hubs · Website agricoolhubs.com (in progress).
+
+3D prototype model (Tripo3D): studio.tripo3d.ai/3d-model/11567e10-64ee-4e4a-92f9-878876797c97
+
+Suppliers to chase: Tunel Group (tunelgroup.com, industrial cooling) · SA suppliers ~P50k/unit · China suppliers very responsive.
+
+Stakeholder letters drafted (need sending): BDIH, BUAN, Ministry of Lands & Agriculture, Farmer Cooperatives.
+
+Opportunities open: Startup Lab Namibia (startuplabafrica4@gmail.com) · One Young World (~Oct) · CMU Africa incubation · easygrant.io.
+
+Farmer lead: Malotwane — willing to validate post-harvest loss + possibly host the first pilot.
+
+SECURITY: passwords were shared in the WhatsApp group (AYCH portal + project email). Do NOT store them here — rotate them and use a password manager.`;

@@ -11,7 +11,7 @@
 // ============================================================
 
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from "react";
-import { SEED_PHASES, SEED_EVENTS, SEED_MILESTONES, SEED_DIARY, SEED_SCRATCHPAD } from "../data/seed.js";
+import { SEED_PHASES, SEED_EVENTS, SEED_MILESTONES, SEED_DIARY, SEED_SCRATCHPAD, SEED_NOTES } from "../data/seed.js";
 import { DEMO_DAY } from "../data/team.js";
 import { parseDate, daysTo, todayStr, newId, clone, sortTasks, taskState } from "../lib/utils.js";
 
@@ -26,6 +26,7 @@ const freshBoard = () => ({
   milestones: clone(SEED_MILESTONES),
   diary: clone(SEED_DIARY),
   scratchpad: clone(SEED_SCRATCHPAD),
+  notes: SEED_NOTES,
 });
 
 // make sure every section exists on a loaded board
@@ -35,6 +36,12 @@ const normalise = (b) => ({
   milestones: b.milestones || clone(SEED_MILESTONES),
   diary: b.diary || [],
   scratchpad: b.scratchpad || [],
+  // Scratchpad is now one big notepad. If this board still has the old
+  // block-style scratchpad and no notes string yet, fold the blocks into
+  // one page so nothing is lost on the first load after the change.
+  notes: typeof b.notes === "string"
+    ? b.notes
+    : (b.scratchpad || []).map((s) => s.text).filter(Boolean).join("\n\n"),
 });
 
 export function BoardProvider({ children }) {
@@ -68,6 +75,29 @@ export function BoardProvider({ children }) {
 
   const pickMe = (id) => { setMe(id); try { localStorage.setItem("agc_me", id); } catch (e) {} };
 
+  // ---- live-sync guards (fix for "the board reloads / flickers while I work") ----
+  const editingRef = useRef(false);   // true while the add/edit modal is open
+  const typingRef = useRef(0);        // timestamp of the last keystroke in a notepad/field
+  const pendingRef = useRef(null);    // a remote update parked until you stop typing
+
+  // anyone typing in a free-text field calls this so a remote echo can't
+  // yank the board out from under them mid-keystroke
+  const signalTyping = () => { typingRef.current = Date.now(); };
+
+  // are we mid-edit? if so, don't let a remote update repaint the screen yet
+  const isBusy = () => editingRef.current || (Date.now() - typingRef.current < 4000);
+
+  // Apply an incoming board from Supabase — but ONLY if it's actually different
+  // (this kills the self-triggered reload from your own save echoing back), and
+  // never while you're typing or have a modal open (park it instead).
+  const applyRemote = (raw) => {
+    let next;
+    try { next = normalise(JSON.parse(raw)); } catch (e) { return; }
+    if (isBusy()) { pendingRef.current = raw; return; }
+    setBoard((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+    setSynced(true); setLastSynced(new Date());
+  };
+
   // ---- save ----
   const persist = async (next, silent) => {
     if (!silent) setBoard(next);
@@ -98,9 +128,7 @@ export function BoardProvider({ children }) {
       setBoard(loaded);
 
       if (window.storage && window.storage.subscribe) {
-        unsub = window.storage.subscribe(STORAGE_KEY, (val) => {
-          try { setBoard(normalise(JSON.parse(val))); setSynced(true); setLastSynced(new Date()); } catch (e) {}
-        });
+        unsub = window.storage.subscribe(STORAGE_KEY, (val) => applyRemote(val));
       }
     })();
     return () => unsub();
@@ -113,12 +141,25 @@ export function BoardProvider({ children }) {
       try {
         if (window.storage && window.storage.configured) {
           const r = await window.storage.get(STORAGE_KEY, true);
-          if (r && r.value) { setBoard(normalise(JSON.parse(r.value))); setSynced(true); }
+          if (r && r.value) applyRemote(r.value);
         }
       } catch (e) { setSynced(false); }
     }, 30000);
     return () => clearInterval(id);
   }, []);
+
+  // ---- flush any parked remote update once you've stopped typing ----
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (pendingRef.current && !isBusy()) {
+        const raw = pendingRef.current; pendingRef.current = null; applyRemote(raw);
+      }
+    }, 1500);
+    return () => clearInterval(id);
+  }, []);
+
+  // ---- track whether the edit modal is open ----
+  useEffect(() => { editingRef.current = !!editing; }, [editing]);
 
   const close = () => { setEditing(null); setDraft(null); };
 
@@ -198,6 +239,9 @@ export function BoardProvider({ children }) {
   const removeDiary = (id) => persist({ ...board, diary: board.diary.filter((d) => d.id !== id) });
 
   // ---- scratchpad actions ----
+  // New: the scratchpad is one shared notepad (board.notes is a string).
+  const saveNotes = (text) => persist({ ...board, notes: text });
+  // Old block actions kept for backward-compat; no longer used by the view.
   const addScratch = () => persist({ ...board, scratchpad: [...board.scratchpad, { id: newId(), text: "" }] });
   const updateScratch = (id, text) => persist({ ...board, scratchpad: board.scratchpad.map((s) => (s.id === id ? { ...s, text } : s)) });
   const removeScratch = (id) => persist({ ...board, scratchpad: board.scratchpad.filter((s) => s.id !== id) });
@@ -241,7 +285,7 @@ export function BoardProvider({ children }) {
     openNewMilestone, openEditMilestone, commitMilestone, removeMilestone,
     openNewEvent, openEditEvent, commitEvent, removeEvent,
     addDiary, removeDiary,
-    addScratch, updateScratch, removeScratch,
+    addScratch, updateScratch, removeScratch, saveNotes, signalTyping,
     resetBoard,
     matchOwner, allTasks, counts, buckets, ownerStats, taskState, daysToDemo,
   };
